@@ -1,47 +1,30 @@
 name: CI
-
 on:
   push:
     branches: [master]
-    paths:
-      - "src/**"
-      - "Dockerfile"
-
-permissions:
-  contents: write
-  packages: write
+    paths: ['src/**', 'Dockerfile']
 
 jobs:
-  build-and-deploy:
+  build-and-update:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set image name
-        run: |
-          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
-          echo "TAG=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ env.IMAGE }}:${{ env.TAG }}
-
-      - name: Update image in Kubernetes manifest
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Définir le tag
+        run: echo "TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+      - name: Build & push
         run: |
-          sed -i "s|image: .*|image: ${IMAGE}:${TAG}|" app/deployment.yaml
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add app/deployment.yaml
-          git commit -m "Deploy image ${TAG}"
+          docker build -t ${{ secrets.DOCKERHUB_USER }}/demo-app:$TAG .
+          docker push ${{ secrets.DOCKERHUB_USER }}/demo-app:$TAG
+      - name: Update manifest
+        run: |
+          sed -i "s|image: .*|image: ${{ secrets.DOCKERHUB_USER }}/demo-app:$TAG|" app/deployment.yaml
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@example.com"
+          git commit -am "ci: update image to $TAG"
           git push
