@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/eyamhamdi03/gitops-demo.git
-    targetRevision: main
+    targetRevision: master
     path: app
   destination:
     server: https://kubernetes.default.svc
