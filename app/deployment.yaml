@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
         - name: demo-app
-          image: ghcr.io/eyamhamdi03/gitops-demo:0091cf0
+          image: eyaaamh/demo-app:64293f1
           ports:
             - containerPort: 80
