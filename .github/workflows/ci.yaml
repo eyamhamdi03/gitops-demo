@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "src/**"
+      - "Dockerfile"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set image name
+        run: |
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+          echo "TAG=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE }}:${{ env.TAG }}
+
+      - name: Update image in Kubernetes manifest
+        run: |
+          sed -i "s|image: .*|image: ${IMAGE}:${TAG}|" app/deployment.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app/deployment.yaml
+          git commit -m "Deploy image ${TAG}"
+          git push
