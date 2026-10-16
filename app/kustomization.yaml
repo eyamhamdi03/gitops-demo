@@ -5,4 +5,4 @@ resources:
   - service.yaml
 images:
   - name: eyaaamh/demo-app
-    newTag: tag-qui-nexiste-pas
+    newTag: 64293f1

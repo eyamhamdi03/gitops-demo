@@ -1,0 +1,30 @@
+name: CI
+on:
+  push:
+    branches: [master]
+    paths: ['src/**', 'Dockerfile']
+
+jobs:
+  build-and-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Définir le tag
+        run: echo "TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+      - name: Build & push
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USER }}/demo-app:$TAG .
+          docker push ${{ secrets.DOCKERHUB_USER }}/demo-app:$TAG
+      - name: Update manifest
+        run: |
+          sed -i "s|image: .*|image: ${{ secrets.DOCKERHUB_USER }}/demo-app:$TAG|" app/deployment.yaml
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@example.com"
+          git commit -am "ci: update image to $TAG"
+          git push
